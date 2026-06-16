@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% block title %}Knockout — World Cup 2026{% endblock %}
+{% block main_class %}bracket-main{% endblock %}
+{% block content %}
+
+{# ── Reusable match card ───────────────────────────────────────────────── #}
+{% macro render_match(match) %}
+<div class="bracket-match {{ 'played' if match.result else '' }}">
+    <div class="bracket-team {{ 'winner' if match.winner == match.home else '' }}{{ ' tbd' if match.tbd else '' }}">
+        {{ flags.get(match.home, '') }} {{ match.home }}
+    </div>
+    <div class="bracket-score">
+        {% if match.result %}
+            <span class="score-text">{{ format_bracket_score(match.result) }}</span>
+        {% elif match.simulatable %}
+            <form method="post" action="{{ url_for('simulate_bracket_match_route') }}" class="inline-form">
+                <input type="hidden" name="match_type" value="{{ match.match_type }}">
+                {% if match.match_type == 'bracket' %}
+                <input type="hidden" name="index" value="{{ match.match_index }}">
+                {% endif %}
+                <button type="submit" class="btn btn-small btn-simulate">Simulate</button>
+            </form>
+        {% elif match.blocked %}
+            <span class="score-locked" title="Simulate the Third Place match first">Locked</span>
+        {% else %}
+            <span class="score-pending">—</span>
+        {% endif %}
+    </div>
+    <div class="bracket-team {{ 'winner' if match.winner == match.away else '' }}{{ ' tbd' if match.tbd else '' }}">
+        {{ flags.get(match.away, '') }} {{ match.away }}
+    </div>
+</div>
+{% endmacro %}
+
+{# ── Page ─────────────────────────────────────────────────────────────── #}
+<section class="bracket-page">
+    <div class="page-header bracket-header fade-in">
+        <h2 class="section-heading">Knockout Stage — {{ bracket.round_name }}</h2>
+        <form method="post" action="{{ url_for('simulate_round_route') }}">
+            <button type="submit" class="btn btn-primary">Simulate Round</button>
+        </form>
+    </div>
+
+    <section class="bracket-viz fade-in" style="transition-delay: 0.05s">
+        <h3 class="section-heading bracket-viz-title">Tournament Bracket</h3>
+        <div class="bracket-container">
+            <div class="wall-chart">
+                <img src="{{ url_for('static', filename='LOGO.png') }}"
+                     alt="" class="wc-logo-watermark">
+
+                {# ── LEFT HALF  R32 → R16 → QF → SF ──────────────────── #}
+                <div class="wall-chart-half wall-chart-left">
+                    {% for round in wall_chart.left_rounds %}
+                    <div class="wall-chart-round {{ 'wall-chart-round--current' if round.is_current else '' }}">
+                        <div class="wall-chart-round-title">{{ round.name }}</div>
+                        <div class="wall-chart-round-matches">
+                            {% for match in round.matches %}
+                            {{ render_match(match) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {# ── CENTER  Final + 3rd Place ────────────────────────── #}
+                <div class="wall-chart-center">
+                    <div class="wall-chart-center-item">
+                        <div class="wall-chart-center-title {{ 'wc-title--current' if wall_chart.center.final and wall_chart.center.final.is_current else '' }}">FINAL</div>
+                        <div class="wall-chart-center-card">
+                            {% if wall_chart.center.final and wall_chart.center.final.matches %}
+                                {% for match in wall_chart.center.final.matches %}
+                                {{ render_match(match) }}
+                                {% endfor %}
+                            {% else %}
+                                <div class="bracket-match">
+                                    <div class="bracket-team tbd">TBD</div>
+                                    <div class="bracket-score"><span class="score-pending">—</span></div>
+                                    <div class="bracket-team tbd">TBD</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="wall-chart-center-item">
+                        <div class="wall-chart-center-title {{ 'wc-title--current' if wall_chart.center.third_place and wall_chart.center.third_place.is_current else '' }}">3RD PLACE</div>
+                        <div class="wall-chart-center-card">
+                            {% if wall_chart.center.third_place and wall_chart.center.third_place.matches %}
+                                {% for match in wall_chart.center.third_place.matches %}
+                                {{ render_match(match) }}
+                                {% endfor %}
+                            {% else %}
+                                <div class="bracket-match">
+                                    <div class="bracket-team tbd">TBD</div>
+                                    <div class="bracket-score"><span class="score-pending">—</span></div>
+                                    <div class="bracket-team tbd">TBD</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# ── RIGHT HALF  SF → QF → R16 → R32 (mirrored) ──────── #}
+                <div class="wall-chart-half wall-chart-right">
+                    {% for round in wall_chart.right_rounds %}
+                    <div class="wall-chart-round {{ 'wall-chart-round--current' if round.is_current else '' }}">
+                        <div class="wall-chart-round-title">{{ round.name }}</div>
+                        <div class="wall-chart-round-matches">
+                            {% for match in round.matches %}
+                            {{ render_match(match) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>{# end wall-chart #}
+        </div>{# end bracket-container #}
+    </section>
+</section>
+{% endblock %}

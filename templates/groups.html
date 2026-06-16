@@ -1,0 +1,214 @@
+{% extends "layout.html" %}
+{% block title %}Group Stage — World Cup 2026{% endblock %}
+{% block content %}
+{% macro pm_flag(match) %}
+{% set hf = flags.get(match.home, '') %}
+{% set af = flags.get(match.away, '') %}
+<div class="proj-m">
+    <span class="proj-flag{% if not hf %} proj-tbd{% endif %}">{{ hf or '?' }}</span>
+    <div class="proj-sep"></div>
+    <span class="proj-flag{% if not af %} proj-tbd{% endif %}">{{ af or '?' }}</span>
+</div>
+{% endmacro %}
+<section class="groups-page">
+    <div class="page-header fade-in">
+        <h2 class="section-heading">Group Stage — Matchday {{ state.current_matchday }} of 3{% if not groups_complete %} (active){% endif %}</h2>
+        {% if groups_complete %}
+        <form method="post" action="{{ url_for('start_knockout') }}">
+            <button type="submit" class="btn btn-primary">Continue to Knockout Stage &rarr;</button>
+        </form>
+        {% elif view_matchday == state.current_matchday %}
+        <form method="post" action="{{ url_for('simulate_matchday_route') }}">
+            <button type="submit" class="btn btn-primary">Simulate Entire Matchday</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="groups-layout">
+        <div class="left-column">
+            <div class="standings-panel fade-in" style="transition-delay: 0.05s">
+                <div class="group-nav">
+                    <a href="{{ url_for('groups_view', group_letter=prev_group, matchday=view_matchday) }}" class="btn btn-small group-nav-btn">&larr; Group {{ prev_group }}</a>
+                    <h3 class="group-nav-title">Group {{ current_group }} Standings</h3>
+                    <a href="{{ url_for('groups_view', group_letter=next_group, matchday=view_matchday) }}" class="btn btn-small group-nav-btn">Group {{ next_group }} &rarr;</a>
+                </div>
+                <table class="data-table standings-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Team</th>
+                            <th>P</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
+                            <th>GF</th>
+                            <th>GA</th>
+                            <th>GD</th>
+                            <th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in standings %}
+                        <tr class="{{ 'qualified' if loop.index <= 2 else ('third-place' if loop.index == 3 else 'eliminated') }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ flags.get(row.team, '') }} {{ row.team }}</td>
+                            <td>{{ row.played }}</td>
+                            <td>{{ row.won }}</td>
+                            <td>{{ row.drawn }}</td>
+                            <td>{{ row.lost }}</td>
+                            <td>{{ row.goals_for }}</td>
+                            <td>{{ row.goals_against }}</td>
+                            <td>{{ row.goal_diff }}</td>
+                            <td><strong>{{ row.points }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="all-groups-mini">
+                    <h4>All Groups</h4>
+                    <div class="group-tabs">
+                        {% for letter in group_letters %}
+                        <a href="{{ url_for('groups_view', group_letter=letter, matchday=view_matchday) }}"
+                           class="group-tab {{ 'active' if letter == current_group else '' }}">{{ letter }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <section class="thirds-panel fade-in" style="transition-delay: 0.1s">
+                <h3 class="section-heading">Ranking of Third-Placed Teams</h3>
+                <p class="hint">Top 8 advance to the Round of 32.</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Team</th>
+                            <th>Pts</th>
+                            <th>GD</th>
+                            <th>GF</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in thirds_ranking %}
+                        <tr class="{{ 'qualified' if loop.index <= 8 else 'eliminated' }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ flags.get(row.team, '') }} {{ row.team }}</td>
+                            <td>{{ row.points }}</td>
+                            <td>{{ row.goal_diff }}</td>
+                            <td>{{ row.goals_for }}</td>
+                            <td>{% if loop.index <= 8 %}Advances{% else %}Eliminated{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </section>
+
+            {# ── Compact Projected Bracket — below Thirds Ranking ────── #}
+            <div class="proj-bracket-col fade-in" style="transition-delay: 0.15s">
+                <h3 class="section-heading">Projected Bracket</h3>
+                <p class="hint">Flags = current leader. ? = TBD.</p>
+                <div class="proj-wc">
+                    {# Left half: R32 → R16 → QF → SF #}
+                    <div class="proj-half">
+                        {% for round in projected_wall_chart.left_rounds %}
+                        <div class="proj-rd{% if round.is_current %} proj-rd--current{% endif %}">
+                            <div class="proj-rd-title">{{ round.name | replace('Round of 32','R32') | replace('Round of 16','R16') | replace('Quarterfinals','QF') | replace('Semifinals','SF') }}</div>
+                            <div class="proj-rd-matches">
+                                {% for match in round.matches %}{{ pm_flag(match) }}{% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {# Center: Final + 3rd Place #}
+                    <div class="proj-center">
+                        <div class="proj-center-item">
+                            <div class="proj-center-label">F</div>
+                            {% for match in projected_wall_chart.center.final.matches %}{{ pm_flag(match) }}{% endfor %}
+                        </div>
+                        <div class="proj-center-item">
+                            <div class="proj-center-label">3P</div>
+                            {% for match in projected_wall_chart.center.third_place.matches %}{{ pm_flag(match) }}{% endfor %}
+                        </div>
+                    </div>
+                    {# Right half: SF → QF → R16 → R32 #}
+                    <div class="proj-half">
+                        {% for round in projected_wall_chart.right_rounds %}
+                        <div class="proj-rd{% if round.is_current %} proj-rd--current{% endif %}">
+                            <div class="proj-rd-title">{{ round.name | replace('Round of 32','R32') | replace('Round of 16','R16') | replace('Quarterfinals','QF') | replace('Semifinals','SF') }}</div>
+                            <div class="proj-rd-matches">
+                                {% for match in round.matches %}{{ pm_flag(match) }}{% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixtures-panel fade-in" style="transition-delay: 0.15s">
+            <div class="matchday-nav">
+                <h3 class="section-heading">Fixtures</h3>
+                <div class="matchday-tabs">
+                    {% for md in [1, 2, 3] %}
+                    <a href="{{ url_for('groups_view', group_letter=current_group, matchday=md) }}"
+                       class="matchday-tab {{ 'active' if md == view_matchday else '' }} {{ 'current' if md == state.current_matchday else '' }}">
+                        MD {{ md }}{% if md == state.current_matchday %} *{% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Group</th>
+                        <th>Match</th>
+                        <th>Result</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in fixtures %}
+                    <tr class="{{ 'played' if f.played else '' }}">
+                        <td>{{ f.group }}</td>
+                        <td class="match-teams">
+                            {% set is_draw = f.result and f.result.home_score == f.result.away_score and not f.result.get('penalties') %}
+                            <span class="team-name {{ 'match-winner' if f.result and f.result.winner == f.home.name and not is_draw else ('match-draw' if is_draw else '') }}">
+                                {{ flags.get(f.home.name, '') }} {{ f.home.name }}
+                            </span>
+                            <span class="match-vs">vs</span>
+                            <span class="team-name {{ 'match-winner' if f.result and f.result.winner == f.away.name and not is_draw else ('match-draw' if is_draw else '') }}">
+                                {{ flags.get(f.away.name, '') }} {{ f.away.name }}
+                            </span>
+                        </td>
+                        <td class="score">
+                            {% if f.result %}
+                                <strong class="{{ 'score-draw' if is_draw else '' }}">{{ format_result(f.result) }}</strong>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if f.simulatable %}
+                            <form method="post" action="{{ url_for('simulate_match_route') }}" class="inline-form">
+                                <input type="hidden" name="group" value="{{ f.group }}">
+                                <input type="hidden" name="matchday" value="{{ f.matchday }}">
+                                <input type="hidden" name="index" value="{{ f.index }}">
+                                <button type="submit" class="btn btn-small">Simulate</button>
+                            </form>
+                            {% elif f.played %}
+                            <span class="badge">Final</span>
+                            {% else %}
+                            <span class="badge badge-muted">Upcoming</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

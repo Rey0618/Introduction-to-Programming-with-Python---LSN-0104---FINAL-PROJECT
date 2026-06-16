@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block title %}Group Draw — World Cup 2026{% endblock %}
+{% block content %}
+<section class="fade-in">
+    <div class="page-header">
+        <h2 class="hero-heading section-heading">Group Draw</h2>
+        <p class="hint">48 teams across 12 groups — top 2 from each group and the 8 best third-place finishers advance.</p>
+    </div>
+
+    <div class="group-preview-grid">
+        {% for letter in group_letters %}
+        <div class="group-card">
+            <div class="group-card-header">GROUP {{ letter }}</div>
+            <ul class="group-team-list">
+                {% for team in groups[letter] %}
+                <li class="group-team-row">
+                    <span class="group-team-flag">{{ flags.get(team.name, '') }}</span>
+                    <span class="group-team-name">{{ team.name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="preview-action">
+        <form method="post" action="{{ url_for('begin') }}">
+            <button type="submit" class="btn btn-primary btn-large">Start Tournament</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

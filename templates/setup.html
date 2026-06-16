@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block title %}Setup — World Cup 2026{% endblock %}
+{% block content %}
+<section class="setup fade-in">
+    <div class="logo-wrap setup-logo">
+        <img src="{{ url_for('static', filename='LOGO.png') }}" alt="World Cup" class="logo">
+    </div>
+    <h2 class="hero-heading section-heading">Start a New Tournament</h2>
+    <p>Choose how to set up the 12 groups of 4 teams (48 nations total).</p>
+    <div class="setup-options">
+        <form method="post" action="{{ url_for('start') }}">
+            <input type="hidden" name="choice" value="real">
+            <button type="submit" class="btn btn-primary">Use Real-Life 2026 Groups</button>
+        </form>
+        <form method="post" action="{{ url_for('start') }}">
+            <input type="hidden" name="choice" value="draw">
+            <button type="submit" class="btn btn-secondary">Draw New Groups</button>
+        </form>
+    </div>
+    <p class="hint">Real groups use the official December 2025 draw. A new draw follows pot and confederation rules.</p>
+</section>
+{% endblock %}

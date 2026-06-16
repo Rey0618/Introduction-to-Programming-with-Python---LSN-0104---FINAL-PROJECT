@@ -1,0 +1,192 @@
+{% extends "layout.html" %}
+{% block title %}Results — World Cup 2026{% endblock %}
+{% block main_class %}bracket-main{% endblock %}
+{% block content %}
+
+{# ── Reusable match card (mirrors bracket.html) ───────────────────────── #}
+{% macro render_match(match) %}
+<div class="bracket-match {{ 'played' if match.result else '' }}">
+    <div class="bracket-team {{ 'winner' if match.winner == match.home else '' }}{{ ' tbd' if match.tbd else '' }}">
+        {{ flags.get(match.home, '') }} {{ match.home }}
+    </div>
+    <div class="bracket-score">
+        {% if match.result %}
+            <span class="score-text">{{ format_bracket_score(match.result) }}</span>
+        {% else %}
+            <span class="score-pending">—</span>
+        {% endif %}
+    </div>
+    <div class="bracket-team {{ 'winner' if match.winner == match.away else '' }}{{ ' tbd' if match.tbd else '' }}">
+        {{ flags.get(match.away, '') }} {{ match.away }}
+    </div>
+</div>
+{% endmacro %}
+
+<section class="results-page">
+
+    {# ── Hero ─────────────────────────────────────────────────────────── #}
+    <div class="results-hero fade-in">
+        <div class="logo-wrap results-logo">
+            <img src="{{ url_for('static', filename='LOGO.png') }}" alt="World Cup" class="logo">
+        </div>
+        <h2 class="hero-heading section-heading">Tournament Complete</h2>
+    </div>
+
+    {# ── Podium ───────────────────────────────────────────────────────── #}
+    {% if state.podium %}
+    <div class="final-score-card fade-in" style="transition-delay: 0.03s">
+        <h3 class="section-heading">Final</h3>
+        <p class="final-scoreline">
+            {{ flags.get(state.podium.final_home, '') }}
+            <strong>{{ state.podium.final_home }}</strong>
+            {{ state.podium.final_score }}
+            <strong>{{ state.podium.final_away }}</strong>
+            {{ flags.get(state.podium.final_away, '') }}
+        </p>
+    </div>
+    <div class="podium fade-in" style="transition-delay: 0.05s">
+        <div class="podium-item champion">
+            <span class="medal">🥇</span>
+            <h3>Champion</h3>
+            <p>{{ flags.get(state.podium.champion, '') }} {{ state.podium.champion }}</p>
+        </div>
+        <div class="podium-item">
+            <span class="medal">🥈</span>
+            <h3>Runner-up</h3>
+            <p>{{ flags.get(state.podium.runner_up, '') }} {{ state.podium.runner_up }}</p>
+        </div>
+        <div class="podium-item">
+            <span class="medal">🥉</span>
+            <h3>Third Place</h3>
+            <p>{{ flags.get(state.podium.third, '') }} {{ state.podium.third }}</p>
+        </div>
+        <div class="podium-item">
+            <span class="medal">4th</span>
+            <h3>Fourth Place</h3>
+            <p>{{ flags.get(state.podium.fourth, '') }} {{ state.podium.fourth }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Finalized Bracket ────────────────────────────────────────────── #}
+    <section class="bracket-viz fade-in" style="transition-delay: 0.08s">
+        <h3 class="section-heading bracket-viz-title">Tournament Bracket</h3>
+        <div class="bracket-container">
+            <div class="wall-chart">
+                <img src="{{ url_for('static', filename='LOGO.png') }}"
+                     alt="" class="wc-logo-watermark">
+
+                {# ── LEFT HALF  R32 → R16 → QF → SF ────────────────── #}
+                <div class="wall-chart-half wall-chart-left">
+                    {% for round in wall_chart.left_rounds %}
+                    <div class="wall-chart-round">
+                        <div class="wall-chart-round-title">{{ round.name }}</div>
+                        <div class="wall-chart-round-matches">
+                            {% for match in round.matches %}
+                            {{ render_match(match) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {# ── CENTER  Final + 3rd Place ───────────────────────── #}
+                <div class="wall-chart-center">
+                    <div class="wall-chart-center-item">
+                        <div class="wall-chart-center-title">FINAL</div>
+                        <div class="wall-chart-center-card">
+                            {% if wall_chart.center.final and wall_chart.center.final.matches %}
+                                {% for match in wall_chart.center.final.matches %}
+                                {{ render_match(match) }}
+                                {% endfor %}
+                            {% else %}
+                                <div class="bracket-match">
+                                    <div class="bracket-team tbd">TBD</div>
+                                    <div class="bracket-score"><span class="score-pending">—</span></div>
+                                    <div class="bracket-team tbd">TBD</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="wall-chart-center-item">
+                        <div class="wall-chart-center-title">3RD PLACE</div>
+                        <div class="wall-chart-center-card">
+                            {% if wall_chart.center.third_place and wall_chart.center.third_place.matches %}
+                                {% for match in wall_chart.center.third_place.matches %}
+                                {{ render_match(match) }}
+                                {% endfor %}
+                            {% else %}
+                                <div class="bracket-match">
+                                    <div class="bracket-team tbd">TBD</div>
+                                    <div class="bracket-score"><span class="score-pending">—</span></div>
+                                    <div class="bracket-team tbd">TBD</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {# ── RIGHT HALF  SF → QF → R16 → R32 (mirrored) ─────── #}
+                <div class="wall-chart-half wall-chart-right">
+                    {% for round in wall_chart.right_rounds %}
+                    <div class="wall-chart-round">
+                        <div class="wall-chart-round-title">{{ round.name }}</div>
+                        <div class="wall-chart-round-matches">
+                            {% for match in round.matches %}
+                            {{ render_match(match) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>{# end wall-chart #}
+        </div>{# end bracket-container #}
+    </section>
+
+    {# ── Group Stage Standings ─────────────────────────────────────────── #}
+    <section class="results-groups fade-in" style="transition-delay: 0.12s">
+        <h3 class="section-heading">Group Stage Standings</h3>
+        <div class="results-groups-grid">
+            {% for letter in group_letters %}
+            {% set table = all_standings[letter] %}
+            <div class="results-group-block">
+                <h4 class="results-group-heading">Group {{ letter }}</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>P</th>
+                            <th>W</th>
+                            <th>D</th>
+                            <th>L</th>
+                            <th>GD</th>
+                            <th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in table %}
+                        <tr class="{{ 'qualified' if loop.index <= 2 else ('third-place' if (loop.index == 3 and row.team in qualified_thirds) else 'eliminated') }}">
+                            <td>{{ flags.get(row.team, '') }} {{ row.team }}</td>
+                            <td>{{ row.played }}</td>
+                            <td>{{ row.won }}</td>
+                            <td>{{ row.drawn }}</td>
+                            <td>{{ row.lost }}</td>
+                            <td>{{ row.goal_diff }}</td>
+                            <td><strong>{{ row.points }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <form method="post" action="{{ url_for('reset') }}" class="reset-form">
+        <button type="submit" class="btn btn-primary">Start New Tournament</button>
+    </form>
+
+</section>
+{% endblock %}
